@@ -6,13 +6,7 @@ export type Phase =
   | "会社員"
   | "フリーランス";
 
-export type Direction =
-  | "起業"
-  | "副業"
-  | "転職"
-  | "スキルアップ"
-  | "投資"
-  | "その他";
+export type Direction = "起業" | "副業" | "転職" | "スキルアップ" | "投資" | "その他";
 
 export type Trait =
   | "クリエイティブ"
@@ -30,8 +24,18 @@ export interface SyncEvent {
   createdAt: string;
 }
 
+export interface MyProfile {
+  id: string; // permanent UUID, used as participant ID across events
+  displayName: string;
+  phase: Phase;
+  directions: Direction[];
+  traits: Trait[];
+  hashtags: string[];
+  bio: string;
+}
+
 export interface Participant {
-  id: string;
+  id: string; // = MyProfile.id (snapshot at join time)
   eventId: string;
   displayName: string;
   phase: Phase;

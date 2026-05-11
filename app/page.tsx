@@ -1,50 +1,90 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
+import NavBar from "@/components/NavBar";
+import EventCard from "@/components/EventCard";
+import Button from "@/components/Button";
+import { storage } from "@/lib/storage";
+import { SyncEvent } from "@/lib/types";
 
-export default function Home() {
+export default function HomePage() {
+  const [events, setEvents] = useState<SyncEvent[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [joinedIds, setJoinedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const evs = storage
+      .getEvents()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    setEvents(evs);
+
+    const c: Record<string, number> = {};
+    for (const e of evs) {
+      c[e.id] = storage.getParticipants(e.id).length;
+    }
+    setCounts(c);
+    setJoinedIds(storage.getJoinedEventIds());
+  }, []);
+
   return (
-    <div className="min-h-screen bg-bg text-fg flex flex-col">
-      <header className="border-b border-border/50 px-6 py-4">
-        <Logo />
-      </header>
+    <div className="min-h-screen bg-bg text-fg">
+      <NavBar />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-4 text-center">
-        <div className="animate-slide-up">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-sm text-accent">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-            イベント参加者マッチング
+      <main className="mx-auto max-w-5xl px-4 py-10">
+        {/* Header row */}
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-1">
+              イベント<span className="text-accent">.</span>
+            </h1>
+            <p className="text-sm text-muted">
+              参加者と事前につながれるイベント一覧
+            </p>
           </div>
-
-          <h1 className="mb-4 text-5xl font-bold tracking-tight">
-            SYNC<span className="text-accent">.</span>
-            <br />
-            <span className="text-fg/60 text-3xl font-medium">for Events</span>
-          </h1>
-
-          <p className="mb-10 max-w-md text-lg text-muted leading-relaxed">
-            イベントで出会うべき人と、つながる。
-            <br />
-            プロフィールをもとに最適な参加者をマッチング。
-          </p>
-
-          <Link
-            href="/create"
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-hover hover:scale-105 active:scale-100"
-          >
-            イベントを作成する
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm7.75-4.25a.75.75 0 0 0-1.5 0V7h-3.5a.75.75 0 0 0 0 1.5h3.5v3.25a.75.75 0 0 0 1.5 0V8.5h3.25a.75.75 0 0 0 0-1.5H8.75V3.75z"
-              />
-            </svg>
+          <Link href="/create">
+            <Button size="md">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <line x1="7" y1="1" x2="7" y2="13" />
+                <line x1="1" y1="7" x2="13" y2="7" />
+              </svg>
+              イベントを作成
+            </Button>
           </Link>
         </div>
-      </main>
 
-      <footer className="border-t border-border/30 px-6 py-4 text-center text-xs text-muted">
-        SYNC. for Events — powered by localStorage
-      </footer>
+        {/* Event grid */}
+        {events.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-surface/50 p-16 text-center animate-fade-in">
+            <div className="mb-3 text-3xl opacity-30">📅</div>
+            <p className="text-muted text-sm mb-5">
+              まだイベントがありません。最初のイベントを作りましょう。
+            </p>
+            <Link href="/create">
+              <Button>イベントを作成する</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+            {events.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                participantCount={counts[event.id] ?? 0}
+                hasJoined={joinedIds.includes(event.id)}
+              />
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

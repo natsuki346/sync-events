@@ -37,51 +37,86 @@ export default function CreatePage() {
       description: form.description.trim(),
       createdAt: new Date().toISOString(),
     });
-    router.push(`/event/${id}/created`);
+    router.push(`/`);
   }
-
-  const field = (name: keyof typeof form, label: string, type = "text", rest?: object) => (
-    <div>
-      <label className="block text-sm font-medium text-fg/80 mb-1.5">{label}</label>
-      {type === "textarea" ? (
-        <textarea
-          value={form[name]}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, [name]: e.target.value }));
-            setErrors((er) => ({ ...er, [name]: "" }));
-          }}
-          rows={4}
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition"
-          {...rest}
-        />
-      ) : (
-        <input
-          type={type}
-          value={form[name]}
-          onChange={(e) => {
-            setForm((f) => ({ ...f, [name]: e.target.value }));
-            setErrors((er) => ({ ...er, [name]: "" }));
-          }}
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
-          {...rest}
-        />
-      )}
-      {errors[name] && <p className="mt-1 text-xs text-red-400">{errors[name]}</p>}
-    </div>
-  );
 
   return (
     <PageShell>
       <div className="animate-slide-up">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 1 3 7 9 13" />
+          </svg>
+          戻る
+        </button>
+
         <h1 className="text-2xl font-bold mb-1">イベントを作成</h1>
-        <p className="text-muted text-sm mb-8">参加者が繋がれるイベントを設定しましょう。</p>
+        <p className="text-sm text-muted mb-8">
+          参加者がつながれるイベントを設定しましょう。
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {field("name", "イベント名", "text", { placeholder: "例: スタートアップナイト Vol.3" })}
-          {field("date", "開催日時", "datetime-local")}
-          {field("description", "イベントの説明", "textarea", {
-            placeholder: "どんな目的・テーマのイベントですか？",
-          })}
+          {/* イベント名 */}
+          <div>
+            <label className="block text-sm font-medium text-fg/80 mb-1.5">
+              イベント名
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, name: e.target.value }));
+                setErrors((er) => ({ ...er, name: "" }));
+              }}
+              placeholder="例: スタートアップナイト Vol.3"
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
+            />
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-400">{errors.name}</p>
+            )}
+          </div>
+
+          {/* 開催日時 */}
+          <div>
+            <label className="block text-sm font-medium text-fg/80 mb-1.5">
+              開催日時
+            </label>
+            <input
+              type="datetime-local"
+              value={form.date}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, date: e.target.value }));
+                setErrors((er) => ({ ...er, date: "" }));
+              }}
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition [color-scheme:dark]"
+            />
+            {errors.date && (
+              <p className="mt-1 text-xs text-red-400">{errors.date}</p>
+            )}
+          </div>
+
+          {/* 説明文 */}
+          <div>
+            <label className="block text-sm font-medium text-fg/80 mb-1.5">
+              イベントの説明
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, description: e.target.value }));
+                setErrors((er) => ({ ...er, description: "" }));
+              }}
+              rows={4}
+              placeholder="どんな目的・テーマのイベントですか？"
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition"
+            />
+            {errors.description && (
+              <p className="mt-1 text-xs text-red-400">{errors.description}</p>
+            )}
+          </div>
 
           <div className="pt-2">
             <Button type="submit" size="lg" className="w-full" disabled={loading}>

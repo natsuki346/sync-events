@@ -4,86 +4,115 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { v4 as uuidv4 } from "uuid";
-import Logo from "@/components/Logo";
+import NavBar from "@/components/NavBar";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import ScoreBar from "@/components/ScoreBar";
 import { storage } from "@/lib/storage";
 import { rankParticipants } from "@/lib/matching";
-import { SyncEvent, Participant, MatchedParticipant } from "@/lib/types";
+import { getEventGradient, formatEventDate } from "@/lib/utils";
+import {
+  SyncEvent,
+  Participant,
+  MatchedParticipant,
+  MyProfile,
+} from "@/lib/types";
+
+// ─── Participant Card ──────────────────────────────────────────────────────────
 
 function ParticipantCard({
-  p,
+  participant,
   isSelf,
-  myId,
+  myProfile,
   eventId,
+  showScore,
+  score,
   onRequest,
 }: {
-  p: MatchedParticipant | Participant;
+  participant: Participant;
   isSelf: boolean;
-  myId: string | null;
+  myProfile: MyProfile | null;
   eventId: string;
+  showScore: boolean;
+  score?: number;
   onRequest: (toId: string) => void;
 }) {
-  const matched = p as MatchedParticipant;
-  const hasScore = "score" in p;
-  const requested =
-    myId && !isSelf ? storage.hasRequested(eventId, myId, p.id) : false;
-  const [sent, setSent] = useState(requested);
+  const [sent, setSent] = useState(() =>
+    myProfile
+      ? storage.hasRequested(eventId, myProfile.id, participant.id)
+      : false
+  );
 
   function handleRequest() {
-    if (!myId || isSelf || sent) return;
-    onRequest(p.id);
+    if (!myProfile || isSelf || sent) return;
+    onRequest(participant.id);
     setSent(true);
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 transition-all hover:border-accent/40 animate-fade-in">
+    <div
+      className={`rounded-2xl border bg-surface p-5 transition-all animate-fade-in ${
+        isSelf
+          ? "border-accent/40 ring-1 ring-accent/20"
+          : "border-border hover:border-accent/30"
+      }`}
+    >
+      {/* Header row */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-accent font-bold text-sm">
-            {p.displayName[0].toUpperCase()}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent font-bold text-sm">
+            {participant.displayName[0]?.toUpperCase()}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-fg">{p.displayName}</span>
-              {isSelf && <Badge variant="self">自分</Badge>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-fg">{participant.displayName}</span>
+              {isSelf && (
+                <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white">
+                  自分
+                </span>
+              )}
             </div>
-            <span className="text-xs text-muted">{p.phase}</span>
+            <span className="text-xs text-muted">{participant.phase}</span>
           </div>
         </div>
-        {hasScore && !isSelf && (
-          <div className="text-right shrink-0">
-            <div className="text-xs text-muted mb-1">マッチ度</div>
-            <div className="w-28">
-              <ScoreBar score={matched.score} />
-            </div>
+
+        {/* Score */}
+        <div className="shrink-0 text-right">
+          <div className="text-[10px] text-muted mb-1">マッチ度</div>
+          <div className="w-24">
+            <ScoreBar score={score} unknown={!showScore} />
           </div>
-        )}
+        </div>
       </div>
 
-      <p className="text-sm text-fg/70 mb-3 leading-relaxed">{p.bio}</p>
+      {/* Bio */}
+      <p className="text-sm text-fg/65 leading-relaxed mb-3 line-clamp-2">
+        {participant.bio}
+      </p>
 
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {p.directions.map((d) => (
+      {/* Tags */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {participant.directions.map((d) => (
           <Badge key={d} variant="accent">{d}</Badge>
         ))}
-        {p.traits.map((t) => (
+        {participant.traits.map((t) => (
           <Badge key={t} variant="outline">{t}</Badge>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {p.hashtags.map((h) => (
-          <span key={h} className="text-xs text-muted">
+      {/* Hashtags */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {participant.hashtags.map((h) => (
+          <span key={h} className="text-xs text-muted/70">
             #{h}
           </span>
         ))}
       </div>
 
-      {!isSelf && myId && (
+      {/* Action */}
+      {!isSelf && myProfile && (
         <Button
-          variant={sent ? "ghost" : "primary"}
+          variant={sent ? "ghost" : "outline"}
           size="sm"
           disabled={sent}
           onClick={handleRequest}
@@ -96,43 +125,56 @@ function ParticipantCard({
   );
 }
 
+// ─── Event Page ───────────────────────────────────────────────────────────────
+
 export default function EventPage() {
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<SyncEvent | null>(null);
-  const [myId, setMyId] = useState<string | null>(null);
-  const [me, setMe] = useState<Participant | null>(null);
+  const [myProfile, setMyProfile] = useState<MyProfile | null>(null);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [ranked, setRanked] = useState<(MatchedParticipant | Participant)[]>([]);
 
   const load = useCallback(() => {
     const ev = storage.getEvent(id);
     setEvent(ev);
-    const mid = storage.getMyId(id);
-    setMyId(mid);
-    const participants = storage.getParticipants(id);
-    const myParticipant = mid ? participants.find((p) => p.id === mid) ?? null : null;
-    setMe(myParticipant);
 
-    if (myParticipant) {
-      const others = rankParticipants(myParticipant, participants);
-      setRanked([myParticipant, ...others]);
+    const profile = storage.getMyProfile();
+    setMyProfile(profile);
+
+    const joined = storage.hasJoined(id);
+    setHasJoined(joined);
+
+    const all = storage.getParticipants(id);
+    setParticipants(all);
+
+    if (profile && joined) {
+      const me = all.find((p) => p.id === profile.id) ?? null;
+      if (me) {
+        const others = rankParticipants(me, all);
+        setRanked([me, ...others]);
+      } else {
+        setRanked(all);
+      }
     } else {
-      setRanked(participants);
+      setRanked([...all].sort(
+        (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+      ));
     }
   }, [id]);
 
   useEffect(() => {
     load();
-    const handler = () => load();
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
+    window.addEventListener("storage", load);
+    return () => window.removeEventListener("storage", load);
   }, [load]);
 
   function handleRequest(toId: string) {
-    if (!myId) return;
+    if (!myProfile) return;
     storage.saveRequest({
       id: uuidv4(),
       eventId: id,
-      fromId: myId,
+      fromId: myProfile.id,
       toId,
       createdAt: new Date().toISOString(),
     });
@@ -146,69 +188,90 @@ export default function EventPage() {
     );
   }
 
+  const scoreFor = (p: Participant): number | undefined => {
+    if (!hasJoined) return undefined;
+    return (ranked as MatchedParticipant[]).find((r) => r.id === p.id)?.score;
+  };
+
   return (
     <div className="min-h-screen bg-bg text-fg">
-      <header className="border-b border-border/50 px-6 py-4 flex items-center justify-between">
-        <Logo />
-        <div className="flex items-center gap-3">
-          {!myId && (
-            <Link href={`/event/${id}/join`}>
-              <Button size="sm">参加する</Button>
-            </Link>
-          )}
-          {myId && (
-            <Link href={`/event/${id}/me`}>
-              <Button variant="outline" size="sm">マイページ</Button>
-            </Link>
-          )}
-        </div>
-      </header>
+      <NavBar />
 
-      <main className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-          <span className="text-xs text-muted uppercase tracking-wider font-medium">Event</span>
+      {/* Banner */}
+      <div
+        className="relative h-48 w-full"
+        style={{ background: getEventGradient(id) }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-5">
+          <h1 className="text-2xl font-bold text-white drop-shadow">{event.name}</h1>
+          <p className="text-sm text-white/70 mt-0.5">{formatEventDate(event.date)}</p>
         </div>
-        <h1 className="text-2xl font-bold mb-1">{event.name}</h1>
-        <p className="text-sm text-muted mb-1">
-          {new Date(event.date).toLocaleString("ja-JP", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-        <p className="text-sm text-fg/60 mb-6">{event.description}</p>
+      </div>
+
+      <main className="mx-auto max-w-2xl px-4 py-8">
+        {/* Event meta */}
+        <div className="rounded-2xl border border-border bg-surface p-5 mb-6">
+          <p className="text-sm text-fg/70 leading-relaxed mb-4">
+            {event.description}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">
+              <span className="text-accent font-semibold">{participants.length}</span>
+              {" "}人参加中
+            </span>
+
+            {!hasJoined && (
+              <Link href={`/event/${id}/join`}>
+                <Button size="sm">参加登録する</Button>
+              </Link>
+            )}
+            {hasJoined && (
+              <span className="inline-flex items-center gap-1.5 text-sm text-accent font-medium">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="2 7 5.5 10.5 12 4" />
+                </svg>
+                参加済み
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Participants */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-fg/70">参加者一覧</h2>
+          {hasJoined && (
+            <span className="text-xs text-muted">マッチ度スコア順</span>
+          )}
+          {!hasJoined && participants.length > 0 && (
+            <span className="text-xs text-muted">
+              参加登録するとマッチ度が表示されます
+            </span>
+          )}
+        </div>
 
         {ranked.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-surface p-10 text-center">
-            <p className="text-muted mb-4">まだ参加者がいません。</p>
+          <div className="rounded-2xl border border-dashed border-border bg-surface/50 p-12 text-center">
+            <p className="text-muted text-sm mb-4">まだ参加者がいません。</p>
             <Link href={`/event/${id}/join`}>
-              <Button>最初に参加する</Button>
+              <Button>最初に参加登録する</Button>
             </Link>
           </div>
         ) : (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-fg/70">
-                参加者 <span className="text-accent">{ranked.length}</span> 人
-              </h2>
-              {me && <span className="text-xs text-muted">マッチ度スコア順</span>}
-            </div>
-            <div className="space-y-4">
-              {ranked.map((p) => (
-                <ParticipantCard
-                  key={p.id}
-                  p={p}
-                  isSelf={p.id === myId}
-                  myId={myId}
-                  eventId={id}
-                  onRequest={handleRequest}
-                />
-              ))}
-            </div>
-          </>
+          <div className="space-y-4">
+            {ranked.map((p) => (
+              <ParticipantCard
+                key={p.id}
+                participant={p}
+                isSelf={p.id === myProfile?.id}
+                myProfile={myProfile}
+                eventId={id}
+                showScore={hasJoined && p.id !== myProfile?.id}
+                score={scoreFor(p)}
+                onRequest={handleRequest}
+              />
+            ))}
+          </div>
         )}
       </main>
     </div>
