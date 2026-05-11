@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PageShell from "@/components/PageShell";
-import Button from "@/components/Button";
+import { v4 as uuidv4 } from "uuid";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 import { storage } from "@/lib/storage";
 import { SyncEvent, MyProfile, Phase, Direction, Trait } from "@/lib/types";
-import { v4 as uuidv4 } from "uuid";
 
 const PHASES: Phase[] = ["学生", "休学中", "起業準備中", "起業中", "会社員", "フリーランス"];
 const DIRECTIONS: Direction[] = ["起業", "副業", "転職", "スキルアップ", "投資", "その他"];
@@ -26,10 +25,10 @@ function Chip<T extends string>({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+      className={`rounded-full border px-3 py-1.5 text-[13px] font-medium transition-all active:scale-95 ${
         selected
           ? "border-accent bg-accent/20 text-accent"
-          : "border-border bg-surface text-fg/60 hover:border-accent/50 hover:text-fg/80"
+          : "border-border bg-surface text-fg/60"
       }`}
     >
       {value}
@@ -37,7 +36,7 @@ function Chip<T extends string>({
   );
 }
 
-// ─── Full Profile Form ─────────────────────────────────────────────────────────
+// ─── Full profile form ─────────────────────────────────────────────────────────
 
 function ProfileForm({
   initialValues,
@@ -62,12 +61,9 @@ function ProfileForm({
   function addHashtag() {
     const tag = hashtagInput.replace(/^#/, "").trim();
     if (!tag) return;
-    if (hashtags.length >= 5) {
-      setErrors((e) => ({ ...e, hashtags: "最大5個です" }));
-      return;
-    }
+    if (hashtags.length >= 5) { setErrors((e) => ({ ...e, hashtags: "最大5個です" })); return; }
     if (hashtags.includes(tag)) return;
-    setHashtags((prev) => [...prev, tag]);
+    setHashtags((p) => [...p, tag]);
     setHashtagInput("");
     setErrors((e) => ({ ...e, hashtags: "" }));
   }
@@ -97,11 +93,10 @@ function ProfileForm({
       <div>
         <label className="block text-sm font-medium text-fg/80 mb-1.5">表示名</label>
         <input
-          type="text"
-          value={displayName}
+          type="text" value={displayName}
           onChange={(e) => { setDisplayName(e.target.value); setErrors((er) => ({ ...er, displayName: "" })); }}
           placeholder="例: 田中 太郎"
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
+          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-[15px] text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
         />
         {errors.displayName && <p className="mt-1 text-xs text-red-400">{errors.displayName}</p>}
       </div>
@@ -165,7 +160,7 @@ function ProfileForm({
             onChange={(e) => setHashtagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addHashtag(); } }}
             placeholder="#キーワードを入力してEnter"
-            className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
+            className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-[14px] text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
           />
           <Button type="button" variant="outline" size="sm" onClick={addHashtag}>追加</Button>
         </div>
@@ -174,7 +169,7 @@ function ProfileForm({
             {hashtags.map((tag) => (
               <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-sm text-accent">
                 #{tag}
-                <button type="button" onClick={() => setHashtags((prev) => prev.filter((t) => t !== tag))} className="hover:text-white ml-0.5">×</button>
+                <button type="button" onClick={() => setHashtags((p) => p.filter((t) => t !== tag))} className="hover:text-white ml-0.5">×</button>
               </span>
             ))}
           </div>
@@ -195,7 +190,7 @@ function ProfileForm({
           onChange={(e) => { setBio(e.target.value); setErrors((er) => ({ ...er, bio: "" })); }}
           rows={3}
           placeholder="どんな人か、何を求めているかを教えてください。"
-          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition"
+          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-[15px] text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition"
         />
         {errors.bio && <p className="mt-1 text-xs text-red-400">{errors.bio}</p>}
       </div>
@@ -230,64 +225,58 @@ export default function JoinPage() {
   function doJoin(values: Omit<MyProfile, "id">) {
     setLoading(true);
     const profileId = existingProfile?.id ?? uuidv4();
-    const profile: MyProfile = { id: profileId, ...values };
-    storage.saveMyProfile(profile);
-    storage.saveParticipant({
-      id: profileId,
-      eventId: id,
-      ...values,
-      joinedAt: new Date().toISOString(),
-    });
+    storage.saveMyProfile({ id: profileId, ...values });
+    storage.saveParticipant({ id: profileId, eventId: id, ...values, joinedAt: new Date().toISOString() });
     storage.addJoinedEventId(id);
-    router.push(`/event/${id}`);
+    router.push("/");
   }
 
   if (!event) {
     return (
-      <PageShell>
-        <p className="text-muted">イベントが見つかりませんでした。</p>
-      </PageShell>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted text-sm">イベントが見つかりませんでした。</p>
+      </div>
     );
   }
 
   return (
-    <PageShell>
-      <div className="animate-slide-up">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 1 3 7 9 13" />
-          </svg>
-          戻る
-        </button>
-
-        <div className="text-xs text-muted font-medium uppercase tracking-wider mb-2">
-          {event.name}
+    <div className="min-h-screen text-fg">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center gap-3 px-4 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-muted active:bg-surface2 transition"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 1 3 7 9 13" />
+            </svg>
+          </button>
+          <div className="min-w-0">
+            <p className="text-[11px] text-muted truncate">{event.name}</p>
+            <h1 className="text-[17px] font-bold leading-tight">参加登録</h1>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold mb-1">参加登録</h1>
-        <p className="text-sm text-muted mb-8">
-          プロフィールをもとに参加者とマッチングします。
-        </p>
+      </header>
 
-        {/* Quick join (existing profile) */}
-        {existingProfile && mode === "quick" && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <p className="text-xs text-muted font-medium uppercase tracking-wider mb-3">
-                登録済みプロフィール
-              </p>
+      <main className="px-4 py-6">
+        {/* Quick join */}
+        {existingProfile && mode === "quick" ? (
+          <div className="space-y-4 animate-slide-up">
+            <p className="text-[13px] text-muted mb-1">以前登録したプロフィールで参加できます。</p>
+
+            {/* Profile preview */}
+            <div className="rounded-2xl border border-border bg-surface p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-accent font-bold">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent font-bold">
                   {existingProfile.displayName[0]?.toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-semibold text-fg">{existingProfile.displayName}</div>
+                  <div className="font-semibold text-[15px] text-fg">{existingProfile.displayName}</div>
                   <div className="text-xs text-muted">{existingProfile.phase}</div>
                 </div>
               </div>
-              <p className="text-sm text-fg/65 mb-3">{existingProfile.bio}</p>
+              <p className="text-sm text-fg/65 mb-3 line-clamp-2">{existingProfile.bio}</p>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {existingProfile.directions.map((d) => <Badge key={d} variant="accent">{d}</Badge>)}
                 {existingProfile.traits.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}
@@ -318,27 +307,22 @@ export default function JoinPage() {
             <button
               type="button"
               onClick={() => setMode("form")}
-              className="w-full text-sm text-muted hover:text-fg text-center py-1 transition-colors"
+              className="w-full text-[13px] text-muted text-center py-1 active:text-fg transition-colors"
             >
               プロフィールを編集して参加 →
             </button>
           </div>
+        ) : (
+          <div className="animate-slide-up">
+            <ProfileForm
+              initialValues={existingProfile ?? {}}
+              onSubmit={doJoin}
+              submitLabel={existingProfile ? "プロフィールを更新して参加する" : "プロフィールを登録してマッチングへ"}
+              loading={loading}
+            />
+          </div>
         )}
-
-        {/* Full form */}
-        {mode === "form" && (
-          <ProfileForm
-            initialValues={existingProfile ?? {}}
-            onSubmit={doJoin}
-            submitLabel={
-              existingProfile
-                ? "プロフィールを更新して参加する"
-                : "プロフィールを登録してマッチングへ"
-            }
-            loading={loading}
-          />
-        )}
-      </div>
-    </PageShell>
+      </main>
+    </div>
   );
 }

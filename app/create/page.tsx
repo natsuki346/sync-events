@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import PageShell from "@/components/PageShell";
 import Button from "@/components/Button";
 import { storage } from "@/lib/storage";
 
@@ -24,10 +23,7 @@ export default function CreatePage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setLoading(true);
     const id = uuidv4();
     storage.saveEvent({
@@ -37,27 +33,27 @@ export default function CreatePage() {
       description: form.description.trim(),
       createdAt: new Date().toISOString(),
     });
-    router.push(`/`);
+    router.push("/explore");
   }
 
   return (
-    <PageShell>
-      <div className="animate-slide-up">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 1 3 7 9 13" />
-          </svg>
-          戻る
-        </button>
+    <div className="min-h-screen text-fg">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur-md border-b border-border/50">
+        <div className="flex items-center gap-3 px-4 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-muted active:bg-surface2 transition"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 1 3 7 9 13" />
+            </svg>
+          </button>
+          <h1 className="text-[17px] font-bold">イベントを作成</h1>
+        </div>
+      </header>
 
-        <h1 className="text-2xl font-bold mb-1">イベントを作成</h1>
-        <p className="text-sm text-muted mb-8">
-          参加者がつながれるイベントを設定しましょう。
-        </p>
-
+      <main className="px-4 py-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* イベント名 */}
           <div>
@@ -67,16 +63,11 @@ export default function CreatePage() {
             <input
               type="text"
               value={form.name}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, name: e.target.value }));
-                setErrors((er) => ({ ...er, name: "" }));
-              }}
+              onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((er) => ({ ...er, name: "" })); }}
               placeholder="例: スタートアップナイト Vol.3"
-              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition"
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition text-[15px]"
             />
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-400">{errors.name}</p>
-            )}
+            {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name}</p>}
           </div>
 
           {/* 開催日時 */}
@@ -87,15 +78,10 @@ export default function CreatePage() {
             <input
               type="datetime-local"
               value={form.date}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, date: e.target.value }));
-                setErrors((er) => ({ ...er, date: "" }));
-              }}
-              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition [color-scheme:dark]"
+              onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); setErrors((er) => ({ ...er, date: "" })); }}
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition [color-scheme:dark] text-[15px]"
             />
-            {errors.date && (
-              <p className="mt-1 text-xs text-red-400">{errors.date}</p>
-            )}
+            {errors.date && <p className="mt-1 text-xs text-red-400">{errors.date}</p>}
           </div>
 
           {/* 説明文 */}
@@ -105,17 +91,12 @@ export default function CreatePage() {
             </label>
             <textarea
               value={form.description}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, description: e.target.value }));
-                setErrors((er) => ({ ...er, description: "" }));
-              }}
+              onChange={(e) => { setForm((f) => ({ ...f, description: e.target.value })); setErrors((er) => ({ ...er, description: "" })); }}
               rows={4}
               placeholder="どんな目的・テーマのイベントですか？"
-              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition"
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none transition text-[15px]"
             />
-            {errors.description && (
-              <p className="mt-1 text-xs text-red-400">{errors.description}</p>
-            )}
+            {errors.description && <p className="mt-1 text-xs text-red-400">{errors.description}</p>}
           </div>
 
           <div className="pt-2">
@@ -124,7 +105,7 @@ export default function CreatePage() {
             </Button>
           </div>
         </form>
-      </div>
-    </PageShell>
+      </main>
+    </div>
   );
 }
